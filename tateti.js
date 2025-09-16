@@ -2,11 +2,6 @@ const express = require('express');
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
-
-// 0 = vacío, 1 = jugador humano, 2 = máquina
-let board = [0,0,0,0,0,0,0,0,0];
-
 // Combinaciones ganadoras
 const winningCombinations = [
   [0, 1, 2],
@@ -19,29 +14,21 @@ const winningCombinations = [
   [2, 4, 6]
 ];
 
-// Ver el tablero actual
-app.get('/board', (req, res) => {
-  res.json({ board });
-});
-
-// Jugada del jugador humano
-app.post('/move-player', (req, res) => {
-  const { position } = req.body;
-
-  if (position < 0 || position > 8) {
-    return res.status(400).json({ error: 'Posición inválida.' });
-  }
-
-  if (board[position] !== 0) {
-    return res.status(400).json({ error: 'Esa casilla ya está ocupada.' });
-  }
-
-  board[position] = 1; // Marca del jugador
-  res.json({ message: 'Movimiento registrado.', board });
-});
-
-// Jugada de la máquina (IA básica)
 app.get('/move', (req, res) => {
+  let board;
+
+  // Leer el tablero desde query (?board=[...])
+  try {
+    board = JSON.parse(req.query.board);
+  } catch {
+    return res.status(400).json({ error: 'Formato de tablero inválido. Usa ?board=[...]' });
+  }
+
+  // Validar tablero
+  if (!Array.isArray(board) || board.length !== 9) {
+    return res.status(400).json({ error: 'Tablero inválido. Debe ser un array de 9 posiciones.' });
+  }
+
   const emptyPositions = board
     .map((v, i) => (v === 0 ? i : null))
     .filter(i => i !== null);
@@ -77,16 +64,10 @@ app.get('/move', (req, res) => {
     move = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
   }
 
-  // Marcar el movimiento en el tablero
+  // Marcar movimiento de la máquina
   board[move] = 2;
 
   res.json({ movimiento: move, board });
-});
-
-// Reiniciar tablero
-app.post('/reset', (req, res) => {
-  board = [0,0,0,0,0,0,0,0,0];
-  res.json({ message: 'Tablero reiniciado.', board });
 });
 
 app.listen(PORT, () => {
